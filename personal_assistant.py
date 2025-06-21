@@ -1,3 +1,8 @@
+import sys
+import random
+import time
+import pyautogui
+import cv2
 import speech_recognition as sr
 import pyttsx3
 import pywhatkit
@@ -5,11 +10,7 @@ import datetime
 import wikipedia
 import pyjokes
 import os
-import sys
-import requests
-import random
-import time
-import re
+from deep_translator import GoogleTranslator
 
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 from comtypes import CLSCTX_ALL
@@ -19,10 +20,10 @@ from ctypes import cast, POINTER
 engine = pyttsx3.init()
 engine.setProperty('rate', 170)
 voices = engine.getProperty('voices')
-engine.setProperty('voice', voices[0].id)  # Male voice
+engine.setProperty('voice', voices[0].id)  
 
 def talk(text):
-    print("🎙️ Ashok:", text)
+    print("\U0001F399\uFE0F Ashok:", text)
     engine.say(text)
     engine.runAndWait()
 
@@ -30,13 +31,13 @@ def talk(text):
 def take_command():
     listener = sr.Recognizer()
     with sr.Microphone() as source:
-        print("🎧 Listening...")
+        print("\U0001F3A7 Listening...")
         listener.adjust_for_ambient_noise(source)
         voice = listener.listen(source)
     try:
         command = listener.recognize_google(voice)
         command = command.lower()
-        print("🗣️ You said:", command)
+        print("\U0001F5E3\uFE0F You said:", command)
     except sr.UnknownValueError:
         return ""
     except sr.RequestError:
@@ -44,96 +45,54 @@ def take_command():
         return ""
     return command
 
-# === FUN FACT FEATURE ===
-facts = [
-    "Honey never spoils.",
-    "Bananas are berries, but strawberries aren’t.",
-    "Octopuses have three hearts.",
-    "A bolt of lightning can toast 100,000 slices of bread."
-]
-def tell_fun_fact():
-    talk("Here's a fun fact:")
-    talk(random.choice(facts))
+def translate_text():
+    talk("What text do you want to translate?")
+    text = take_command()
+    if text == "":
+        talk("Sorry, I couldn't hear the text.")
+        return
 
-# === MOTIVATIONAL QUOTES ===
-quotes = [
-    "Believe in yourself and all that you are.",
-    "Push yourself, because no one else is going to do it for you.",
-    "Dream big and dare to fail.",
-    "Success is not for the lazy.",
-    "Great things never come from comfort zones."
-]
+    talk("Which language should I translate to? For example, say Hindi, French, or Telugu.")
+    target = take_command()
 
-# === VOLUME FEATURE ===
-def set_volume(level):
+    lang_map = {
+        "english": "en",
+        "hindi": "hi",
+        "french": "fr",
+        "spanish": "es",
+        "german": "de",
+        "tamil": "ta",
+        "telugu": "te",
+        "kannada": "kn",
+        "malayalam": "ml"
+    }
+
+    lang_code = next((lang_map[lang] for lang in lang_map if lang in target.lower()), None)
+
+    if not lang_code:
+        talk("Sorry, I don't support that language yet.")
+        return
+
     try:
-        devices = AudioUtilities.GetSpeakers()
-        interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-        volume = cast(interface, POINTER(IAudioEndpointVolume))
-        volume.SetMasterVolumeLevelScalar(level / 100, None)
-    except Exception as e:
-        talk("Volume control failed.")
-        print("Volume Error:", e)
-
-# === CALCULATOR FEATURE ===
-def calculate(expression):
-    expression = expression.replace("plus", "+").replace("minus", "-").replace("times", "*").replace("divided by", "/")
-    try:
-        result = eval(expression)
-        talk(f"The answer is {result}")
+        translated = GoogleTranslator(source='auto', target=lang_code).translate(text)
+        talk(f"The translation in {target.title()} is:")
+        talk(translated)
     except:
-        talk("Sorry, I couldn't calculate that.")
-
-# === WHATSAPP MESSAGE FEATURE ===
-def send_whatsapp_message():
-    talk("Who should I send the message to? Please say the phone number with country code.")
-    phone = take_command().replace(" ", "").replace("+", "")
-    if not phone.startswith("91"):
-        phone = "91" + phone
-    phone = "+" + phone
-
-    talk("What is the message?")
-    message = take_command()
-
-    now = datetime.datetime.now()
-    hour = now.hour
-    minute = now.minute + 1  # Send 1 minute later
-
-    try:
-        pywhatkit.sendwhatmsg(phone, message, hour, minute, wait_time=10, tab_close=True)
-        talk("Message scheduled on WhatsApp.")
-    except Exception as e:
-        print(e)
-        talk("Sorry, I couldn't send the message.")
-
-# === FILE READER FEATURE ===
-def read_file():
-    talk("Say the file name with extension.")
-    filename = take_command().strip()
-    if os.path.exists(filename):
-        with open(filename, 'r') as f:
-            content = f.read()
-            talk("Reading the file:")
-            talk(content)
-    else:
-        talk("Sorry, that file does not exist.")
+        talk("Translation failed. Please try again later.")
 
 # === MAIN ASSISTANT LOGIC ===
-def run_teju(command):
+def handle_command(command):
     if "play" in command:
         song = command.replace("play", "").strip()
-        talk(f"Playing {song} on YouTube 🎶")
+        talk(f"Playing {song} on YouTube \U0001F3B6")
         pywhatkit.playonyt(song)
 
     elif "what's the time" in command or "time" in command:
         time_now = datetime.datetime.now().strftime('%I:%M %p')
-        talk(f"It’s {time_now} ⏰")
+        talk(f"It is {time_now} ⏰")
 
-    elif "who is ravi teja" in command or "who is raviteja" in command:
-        talk("Ravi Teja is the creator of this personal voice assistant, Ashok.")
-        talk("He is currently pursuing B.Tech in Artificial Intelligence and machine learning at Kalasalingam University.")
-        talk("He is passionate about coding, automation, and building AI-powered tools.")
-
+    elif "who is ravi teja" in command or "who is teju" in command:
+        talk("He is a kind individual from Dharmavaram currently pursuing a B.Tech degree.")
 
     elif "who is" in command:
         person = command.replace("who is", "").strip()
@@ -149,20 +108,34 @@ def run_teju(command):
     elif "open chrome" in command:
         chrome_path = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
         if os.path.exists(chrome_path):
-            talk("Opening Chrome 🚀")
+            talk("Opening Chrome \U0001F680")
             os.startfile(chrome_path)
         else:
-            talk("Chrome path not found 😬")
+            talk("Chrome path not found.")
 
     elif "open code" in command or "open vs code" in command:
-        talk("Opening VS Code 💻")
+        talk("Opening Visual Studio Code \U0001F4BB")
         os.system("code")
 
     elif "fun fact" in command:
-        tell_fun_fact()
+        talk("Here's a fun fact:")
+        facts = [
+            "Honey never spoils.",
+            "Bananas are berries, but strawberries aren’t.",
+            "Octopuses have three hearts.",
+            "A bolt of lightning can toast 100,000 slices of bread."
+        ]
+        talk(random.choice(facts))
 
     elif "motivate" in command or "motivation" in command:
-        talk("Here's a motivation for you:")
+        quotes = [
+            "Believe in yourself and all that you are.",
+            "Push yourself, because no one else is going to do it for you.",
+            "Dream big and dare to fail.",
+            "Success is not for the lazy.",
+            "Great things never come from comfort zones."
+        ]
+        talk("Here's a motivational quote:")
         talk(random.choice(quotes))
 
     elif "set a timer" in command:
@@ -172,7 +145,7 @@ def run_teju(command):
             seconds = int(seconds_input)
             talk(f"Setting a timer for {seconds} seconds ⏳")
             time.sleep(seconds)
-            talk("Time's up! 🔔")
+            talk("Time's up! \U0001F514")
         except ValueError:
             talk("That wasn’t a valid number.")
 
@@ -181,8 +154,11 @@ def run_teju(command):
         level_cmd = take_command()
         try:
             level = int(level_cmd)
-            set_volume(level)
-            talk(f"Volume set to {level}%.")
+            devices = AudioUtilities.GetSpeakers()
+            interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+            volume = cast(interface, POINTER(IAudioEndpointVolume))
+            volume.SetMasterVolumeLevelScalar(level / 100, None)
+            talk(f"Volume set to {level} percent.")
         except:
             talk("I didn’t understand the volume level.")
 
@@ -191,14 +167,14 @@ def run_teju(command):
         note = take_command()
         with open("notes.txt", "a") as file:
             file.write(f"{note}\n")
-        talk("Noted it down 📝")
+        talk("Note saved successfully.")
 
     elif "read notes" in command or "show notes" in command:
         if os.path.exists("notes.txt"):
             with open("notes.txt", "r") as file:
                 notes = file.readlines()
                 if notes:
-                    talk("Here are your notes:")
+                    talk("Here are your saved notes:")
                     for line in notes:
                         talk(line.strip())
                 else:
@@ -208,25 +184,77 @@ def run_teju(command):
 
     elif "calculate" in command:
         expression = command.replace("calculate", "").strip()
-        calculate(expression)
+        expression = expression.replace("plus", "+").replace("minus", "-").replace("times", "*").replace("divided by", "/")
+        try:
+            result = eval(expression)
+            talk(f"The answer is {result}")
+        except:
+            talk("Sorry, I couldn't calculate that.")
 
     elif "send message" in command or "whatsapp" in command:
-        send_whatsapp_message()
+        talk("Who should I send the message to? Please say the phone number with country code.")
+        phone = take_command().replace(" ", "").replace("+", "")
+        if not phone.startswith("91"):
+            phone = "91" + phone
+        phone = "+" + phone
 
-    elif "read file" in command:
-        read_file()
+        talk("What is the message?")
+        message = take_command()
+
+        now = datetime.datetime.now()
+        hour = now.hour
+        minute = now.minute + 1
+        try:
+            pywhatkit.sendwhatmsg(phone, message, hour, minute, wait_time=10, tab_close=True)
+            talk("Message scheduled on WhatsApp.")
+        except Exception as e:
+            print(e)
+            talk("Sorry, I couldn't send the message.")
+
+    elif "translate" in command:
+        translate_text()
+
+    elif "screenshot" in command:
+        talk("Taking screenshot...")
+        screenshot = pyautogui.screenshot()
+        filename = f"screenshot_{int(time.time())}.png"
+        screenshot.save(filename)
+        talk(f"Screenshot saved as {filename}.")
+
+    elif "open camera" in command or "click photo" in command:
+        talk("Opening camera. Press SPACE to capture or ESC to cancel.")
+        cam = cv2.VideoCapture(0)
+
+        while True:
+            ret, frame = cam.read()
+            frame = cv2.flip(frame, 1)
+            cv2.imshow("Camera - Press SPACE to capture", frame)
+
+            key = cv2.waitKey(1)
+            if key == 27:
+                talk("Camera closed.")
+                break
+            elif key == 32:
+                filename = f"photo_{int(time.time())}.jpg"
+                cv2.imwrite(filename, frame)
+                talk(f"Photo saved as {filename}.")
+                break
+
+        cam.release()
+        cv2.destroyAllWindows()
 
     elif "exit" in command or "stop" in command:
-        talk("Okay bro, see you later 👋")
+        talk("Thank you. Have a nice day!")
         sys.exit()
 
     elif command != "":
-        talk("I heard you, but I don’t understand that yet 😅")
+        talk("I heard you, but I do not understand that command yet.")
 
 # === STARTUP WITH WAKE WORD ===
-talk("Yo! I'm Ashok – your personal voice assistant 💡")
+talk("Hello, I am Ashok – your personal voice assistant. How can I assist you today?")
 while True:
     command = take_command()
     if "ashok" in command:
         command = command.replace("ashok", "").strip()
-        run_teju(command)
+        handle_command(command)
+
